@@ -13,7 +13,7 @@ const router = createBrowserRouter([
     element: <PageCreateTrip />,
   },
   {
-    path: '/trips/:tripID',
+    path: '/trips/:tripId',
     element: <PageTripDashboard />
   }
 ]);

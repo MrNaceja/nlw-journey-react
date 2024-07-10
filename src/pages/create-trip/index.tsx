@@ -1,20 +1,33 @@
 
-import { MapPin, Calendar, ArrowRight, UserRoundPlus, Settings2 } from 'lucide-react';
+import { MapPin, Calendar as CalendarIcon, ArrowRight, UserRoundPlus, Settings2 } from 'lucide-react';
 import { useState } from 'react';
 import { ModalInviteGuests } from './modal-invite-guests';
 import { ModalConfirmTrip } from './modal-confirm-trip';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/button';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { DateRange } from 'react-day-picker';
+import { format } from "date-fns"
+import { api } from '../../lib/api';
+import { TOwnerTrip } from '../../types';
 
-export type TCreatorTrip = {
-    name: string,
-    email: string
-}
 export function PageCreateTrip() {
     const navigator = useNavigate()
 
-    const [hasLocationDefined, setHasLocationDefined] = useState(false)
     const [emailsInvited, setEmailsInvited] = useState<string[]>([])
+    const [destination, setDestination] = useState('');
+    const [period, setPeriod] = useState<DateRange | undefined>()
+    const [isConfirmedDestinationAndPeriod, setIsConfirmedDestinationAndPeriodDefined] = useState(false)
+
+    const hasDestinationAndPeriod = destination.length > 0 && (!!period?.from && !!period?.to)
+
+    const confirmDestinationAndPeriod = () => setIsConfirmedDestinationAndPeriodDefined(true);
+    const changeDestinationAndPeriod = () => setIsConfirmedDestinationAndPeriodDefined(false);
 
     const [modalInviteGuestsIsOpen, setModalInviteGuestsIsOpen] = useState(false)
     const [modalConfirmTripIsOpen, setModalConfirmTripIsOpen] = useState(false)
@@ -24,16 +37,33 @@ export function PageCreateTrip() {
     const closeModalInviteGuests = () => setModalInviteGuestsIsOpen(false)
     const closeModalConfirmTrip = () => setModalConfirmTripIsOpen(false)
 
-    const confirmLocation = () => setHasLocationDefined(true)
-    const changeLocation = () => setHasLocationDefined(false)
+    const createTrip = async (owner: TOwnerTrip) => {
+        if (!hasDestinationAndPeriod) return
+        if (emailsInvited.length == 0) return
 
-    const createTrip = (creator: TCreatorTrip) => {
-        //criar a viagem...
-        navigator('/trips/1')
+        const trip = {
+            destination,
+            starts_at: period.from,
+            ends_at: period.to,
+            emails_to_invite: emailsInvited,
+            owner_name: owner.name,
+            owner_email: owner.email
+        }
+        try {
+            const res = await api.post('/trips', trip)
+            const { tripId } = res.data
+            navigator(`/trips/${tripId}`);
+        }
+        catch (error) {
+            console.error('erro', error)
+        }
     }
 
     const addEmailInvited = (emailToInvite: string) => setEmailsInvited([...emailsInvited, emailToInvite])
     const removeEmailInvited = (emailToRemove: string) => setEmailsInvited([...emailsInvited.filter(email => email !== emailToRemove)]);
+
+    const formattedPeriod = (period?.from && period?.to) ? format(period.from, "d ' de ' LLL ' até " + format(period.to, "d ' de ' LLL") + "'") : null
+
 
     return (
         <section className="h-screen w-screen grid place-items-center bg-pattern bg-no-repeat bg-center">
@@ -46,30 +76,47 @@ export function PageCreateTrip() {
                 </div>
                 <main className='flex flex-col space-y-4 items-center'>
                     <div className="w-full px-4 h-16 rounded-xl bg-zinc-900 flex items-center gap-5">
-                        <div className='flex items-center justify-between'>
-                            <div className='flex items-center gap-2'>
+                        <div className='flex items-center justify-between flex-1'>
+                            <div className='flex items-center gap-2 flex-1'>
                                 <MapPin className='size-5 text-zinc-400' />
-                                <input disabled={hasLocationDefined} type="text" placeholder="Para onde você vai?" className="bg-transparent text-lg placeholder-zinc-400 outline-none flex-1" />
+                                <input disabled={isConfirmedDestinationAndPeriod}
+                                    type="text"
+                                    placeholder="Para onde você vai?"
+                                    className="bg-transparent text-lg placeholder-zinc-400 outline-none"
+                                    onChange={e => setDestination(e.currentTarget.value)}
+                                />
                             </div>
-
-                            <div className='flex items-center gap-2'>
-                                <Calendar className='size-5 text-zinc-400' />
-                                <input disabled={hasLocationDefined} type="text" placeholder="Quando?" className="bg-transparent text-lg placeholder-zinc-400 outline-none w-[100px]" />
-                            </div>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button className='flex items-center gap-2 text-md text-zinc-400 text-left'>
+                                        <CalendarIcon className='size-5 text-zinc-400' />
+                                        <span> {formattedPeriod ?? 'Quando?'}</span>
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" side="left">
+                                    <Calendar
+                                        mode="range"
+                                        selected={period}
+                                        onSelect={setPeriod}
+                                        initialFocus
+                                        defaultMonth={period?.from}
+                                    />
+                                </PopoverContent>
+                            </Popover>
                         </div>
 
                         <hr className='w-px h-6 bg-zinc-800' />
 
                         {
-                            !hasLocationDefined
+                            !isConfirmedDestinationAndPeriod
                                 ? (
-                                    <Button onClick={confirmLocation}>
+                                    <Button onClick={confirmDestinationAndPeriod} disabled={!hasDestinationAndPeriod}>
                                         Continuar
                                         <ArrowRight className='size-5' />
                                     </Button>
                                 )
                                 : (
-                                    <Button variant='secondary' onClick={changeLocation}>
+                                    <Button variant='secondary' onClick={changeDestinationAndPeriod}>
                                         Alterar local/data
                                         <Settings2 className='size-5' />
                                     </Button>
@@ -77,7 +124,7 @@ export function PageCreateTrip() {
                         }
                     </div>
                     {
-                        hasLocationDefined && (
+                        isConfirmedDestinationAndPeriod && (
                             <div className="w-full px-4 h-16 rounded-xl bg-zinc-900 flex items-center gap-5">
                                 <button className='flex items-center gap-2 flex-1 text-left' type='button' onClick={openModalInviteGuests}>
                                     <UserRoundPlus className='size-5 text-zinc-400' />
@@ -113,6 +160,8 @@ export function PageCreateTrip() {
                 isOpen={modalConfirmTripIsOpen}
                 closeModal={closeModalConfirmTrip}
                 onConfirmTrip={createTrip}
+                tripDestination={destination}
+                tripPeriod={formattedPeriod ?? ''}
             />
         </section>
     )

@@ -11,20 +11,24 @@ const buttonVariants = tv({
         },
         full: {
             true: 'w-full'
+        },
+        disabled: {
+            true: "opacity-50 bg-zinc-700 text-zinc-200 hover:bg-zinc-700 cursor-not-allowed"
         }
     },
 
     defaultVariants: {
         variant: "primary",
-        full: false
+        full: false,
+        disabled: false
     }
 })
 
 interface IButton extends PropsWithChildren, ComponentProps<'button'>, VariantProps<typeof buttonVariants> {
 }
-export function Button({ children, full, variant, ...buttonProps }: IButton) {
+export function Button({ children, full, variant, disabled, ...buttonProps }: IButton) {
     return (
-        <button {...buttonProps} className={buttonVariants({ variant, full })}>
+        <button {...buttonProps} disabled={disabled} className={buttonVariants({ variant, full, disabled })}>
             {children}
         </button>
     )

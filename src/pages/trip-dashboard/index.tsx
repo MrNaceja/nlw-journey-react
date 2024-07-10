@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "../../components/button";
 import { Header } from "./header";
 import { ListImportantLinks } from "./list-important-links";
-import { ListGuests } from "./list-guests";
+import { ListParticipants } from "./list-participants";
 import { ListActivities } from "./list-activities";
 
 export function PageTripDashboard() {
@@ -30,7 +30,7 @@ export function PageTripDashboard() {
                 <aside className="flex flex-col gap-6">
                     <ListImportantLinks />
                     <hr className='w-full h-px bg-zinc-800' />
-                    <ListGuests />
+                    <ListParticipants />
                 </aside>
             </main>
 
